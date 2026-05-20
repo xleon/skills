@@ -51,11 +51,11 @@ prompt_install_dir() {
   done
   echo "   c) Custom path"
   echo ""
-  read -rp "Select option [1]: " choice
+  read -rp "Select option [1]: " choice </dev/tty
   choice="${choice:-1}"
 
   if [[ "$choice" == "c" || "$choice" == "C" ]]; then
-    read -rp "Path: " custom
+    read -rp "Path: " custom </dev/tty
     custom="${custom/#\~/$HOME}"
     INSTALL_DIR="$custom"
   elif [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#dirs[@]} )); then
@@ -117,7 +117,7 @@ interactive_select() {
   done
   echo "   a) All"
   echo ""
-  read -rp "Select number(s) separated by spaces (or 'a' for all): " input
+  read -rp "Select number(s) separated by spaces (or 'a' for all): " input </dev/tty
 
   if [[ "$input" == "a" ]]; then
     echo "${skills[@]}"
@@ -182,9 +182,11 @@ main() {
       ;;
     interactive)
       read -ra to_install < <(interactive_select "${available[@]}")
-      for skill in "${to_install[@]}"; do
-        install_skill "$skill"
-      done
+      if [[ ${#to_install[@]} -gt 0 ]]; then
+        for skill in "${to_install[@]}"; do
+          install_skill "$skill"
+        done
+      fi
       ;;
   esac
 
