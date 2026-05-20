@@ -5,7 +5,7 @@ Personal AI coding skills for GitHub Copilot, Cursor, Claude Code and OpenCode.
 ## Install
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/xleon/skills/main/install.sh)
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/xleon/skills/main/install.sh)"
 ```
 
 Or clone and run locally:
