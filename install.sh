@@ -111,7 +111,10 @@ install_skill() {
 }
 
 # ── interactive select ───────────────────────────────────────────────────────
+SELECTED_SKILLS=()
+
 interactive_select() {
+  SELECTED_SKILLS=()
   local skills=("$@")
   echo ""
   echo -e "${BOLD}Available skills:${RESET}"
@@ -123,19 +126,17 @@ interactive_select() {
   read -rp "Select number(s) separated by spaces (or 'a' for all): " input
 
   if [[ "$input" == "a" ]]; then
-    echo "${skills[@]}"
+    SELECTED_SKILLS=("${skills[@]}")
     return
   fi
 
-  local selected=()
   for token in $input; do
     if [[ "$token" =~ ^[0-9]+$ ]] && (( token >= 1 && token <= ${#skills[@]} )); then
-      selected+=("${skills[$((token-1))]}")
+      SELECTED_SKILLS+=("${skills[$((token-1))]}")
     else
       warn "Invalid option ignored: $token"
     fi
   done
-  echo "${selected[@]}"
 }
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -165,14 +166,16 @@ main() {
     error "No skills found in the repository."
   fi
 
+  if [[ "$mode" == "list" ]]; then
+    echo -e "${BOLD}Available skills in the repo:${RESET}"
+    printf '  %s\n' "${available[@]}"
+    return
+  fi
+
   [[ -z "$INSTALL_DIR" ]] && prompt_install_dir
   mkdir -p "$INSTALL_DIR"
 
   case "$mode" in
-    list)
-      echo -e "${BOLD}Available skills in the repo:${RESET}"
-      printf '  %s\n' "${available[@]}"
-      ;;
     all)
       for skill in "${available[@]}"; do
         install_skill "$skill"
@@ -184,9 +187,9 @@ main() {
       done
       ;;
     interactive)
-      read -ra to_install < <(interactive_select "${available[@]}")
-      if [[ ${#to_install[@]} -gt 0 ]]; then
-        for skill in "${to_install[@]}"; do
+      interactive_select "${available[@]}"
+      if [[ ${#SELECTED_SKILLS[@]} -gt 0 ]]; then
+        for skill in "${SELECTED_SKILLS[@]}"; do
           install_skill "$skill"
         done
       fi
