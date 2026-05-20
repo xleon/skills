@@ -17,6 +17,7 @@ Applies a styled theme to VS Code's built-in Markdown preview.
 | `github-light` | `theme-github-light.css` | Sans-serif | Clean, minimal — GitHub docs style |
 | `solarized-light` | `theme-solarized-light.css` | Serif | Warm amber, scientifically tuned for readability |
 | `bear` | `theme-bear.css` | Serif | Warm paper aesthetic, frosted frame |
+| `forest` | `theme-forest.css` | Serif | Soft green palette, frosted frame, teal accents — the original |
 
 ### Dark
 
@@ -34,7 +35,7 @@ If no theme was specified, ask:
 
 > Which Markdown preview theme would you like?
 >
-> **Light:** `github-light`, `solarized-light`, `bear`
+> **Light:** `github-light`, `solarized-light`, `bear`, `forest`
 > **Dark:** `one-dark`, `dracula`, `nord`
 
 ### 1. Copy the CSS
