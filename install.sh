@@ -153,7 +153,10 @@ main() {
   done
 
   fetch_repo
-  mapfile -t available < <(list_skills)
+  available=()
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && available+=("$line")
+  done < <(list_skills)
 
   if [[ ${#available[@]} -eq 0 ]]; then
     error "No skills found in the repository."
