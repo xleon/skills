@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# When run via bash <(curl ...) stdin is not the terminal — fix it
+[[ ! -t 0 ]] && exec </dev/tty
+
 REPO_URL="https://github.com/xleon/skills"
 INSTALL_DIR=""
 SKILL_MARKER="SKILL.md"
@@ -51,11 +54,11 @@ prompt_install_dir() {
   done
   echo "   c) Custom path"
   echo ""
-  read -rp "Select option [1]: " choice </dev/tty
+  read -rp "Select option [1]: " choice
   choice="${choice:-1}"
 
   if [[ "$choice" == "c" || "$choice" == "C" ]]; then
-    read -rp "Path: " custom </dev/tty
+    read -rp "Path: " custom
     custom="${custom/#\~/$HOME}"
     INSTALL_DIR="$custom"
   elif [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#dirs[@]} )); then
@@ -117,7 +120,7 @@ interactive_select() {
   done
   echo "   a) All"
   echo ""
-  read -rp "Select number(s) separated by spaces (or 'a' for all): " input </dev/tty
+  read -rp "Select number(s) separated by spaces (or 'a' for all): " input
 
   if [[ "$input" == "a" ]]; then
     echo "${skills[@]}"
