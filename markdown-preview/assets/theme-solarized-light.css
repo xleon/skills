@@ -1,0 +1,141 @@
+/*
+ * Markdown preview theme: Solarized Light
+ * Based on Ethan Schoonover's Solarized palette.
+ * https://ethanschoonover.com/solarized/
+ */
+
+:root {
+  /* Solarized base tones */
+  --base03:  #002b36;
+  --base02:  #073642;
+  --base01:  #586e75;
+  --base00:  #657b83;
+  --base1:   #93a1a1;
+  --base2:   #eee8d5;
+  --base3:   #fdf6e3;
+  /* Accent colors */
+  --blue:    #268bd2;
+  --cyan:    #2aa198;
+  --orange:  #cb4b16;
+  /* Mapped roles */
+  --page-bg:     var(--base3);
+  --ink:         var(--base00);
+  --muted:       var(--base1);
+  --soft:        var(--base2);
+  --line:        #c9bda8;
+  --accent:      var(--blue);
+  --accent-strong: var(--cyan);
+  --accent-soft: #d5eaf8;
+  --code-bg:     var(--base2);
+  --table-head:  var(--base2);
+}
+
+body {
+  box-sizing: border-box;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 56px 72px;
+  color: var(--ink);
+  background: var(--page-bg);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.75;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 2.2em 0 0.6em;
+  color: var(--base01);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 700;
+  line-height: 1.22;
+}
+
+h1 {
+  margin-top: 0;
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid var(--line);
+  font-size: 2.1rem;
+  color: var(--base02);
+}
+
+h2 {
+  font-size: 1.5rem;
+  color: var(--base02);
+}
+
+h3 { font-size: 1.2rem; }
+
+p { margin: 0 0 1.2em; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  padding: 0.2em 0.45em;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--orange);
+  font-family: ui-monospace, "Fira Code", Consolas, monospace;
+  font-size: 0.875em;
+}
+
+pre {
+  padding: 18px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+pre code {
+  padding: 0;
+  background: transparent;
+  color: var(--base01);
+  font-size: 0.9em;
+}
+
+blockquote {
+  margin: 1.2em 0;
+  padding: 0.1em 1.2em;
+  border-left: 4px solid var(--accent-strong);
+  background: rgba(238, 232, 213, 0.5);
+  color: var(--base01);
+  font-style: italic;
+}
+
+hr {
+  margin: 2em 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95em;
+}
+
+th {
+  padding: 9px 14px;
+  background: var(--table-head);
+  border: 1px solid var(--line);
+  font-weight: 700;
+  text-align: left;
+  color: var(--base01);
+}
+
+td {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+}
+
+tr:nth-child(even) { background: rgba(238, 232, 213, 0.45); }
+
+img { max-width: 100%; border-radius: 6px; }
+
+ul, ol { padding-left: 2em; margin: 0.4em 0 1em; }
+li { margin: 0.3em 0; }

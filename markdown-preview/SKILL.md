@@ -1,28 +1,52 @@
 ---
 name: markdown-preview
 description: "Customize VS Code Markdown preview with a styled theme. Use when: personalizar vista previa markdown, markdown preview theme, add CSS to markdown preview, custom markdown styles, vista previa bonita."
-argument-hint: "<project-root> (optional, defaults to current workspace)"
+argument-hint: "<theme-name> <project-root> (theme and project are optional)"
 ---
 
 # Markdown Preview Customization
 
-Applies a styled green-toned serif theme to VS Code's built-in Markdown preview.
+Applies a styled theme to VS Code's built-in Markdown preview.
 
-## What it installs
+## Available themes
 
-Two files into `.vscode/`:
+### Light
 
-| File | Purpose |
-|------|---------|
-| [assets/markdown-preview.css](./assets/markdown-preview.css) | Theme stylesheet |
-| [assets/settings.json](./assets/settings.json) | Registers the CSS via `markdown.styles` |
+| Theme | File | Style | Vibe |
+|-------|------|-------|------|
+| `github-light` | `theme-github-light.css` | Sans-serif | Clean, minimal — GitHub docs style |
+| `solarized-light` | `theme-solarized-light.css` | Serif | Warm amber, scientifically tuned for readability |
+| `bear` | `theme-bear.css` | Serif | Warm paper aesthetic, frosted frame |
+
+### Dark
+
+| Theme | File | Style | Vibe |
+|-------|------|-------|------|
+| `one-dark` | `theme-one-dark.css` | Sans-serif | Atom's iconic One Dark — blue/teal accents |
+| `dracula` | `theme-dracula.css` | Sans-serif | High-contrast purple/pink, vibrant |
+| `nord` | `theme-nord.css` | Sans-serif | Arctic cool-blue palette, easy on the eyes |
 
 ## Procedure
+
+### 0. Ask the user which theme they want
+
+If no theme was specified, ask:
+
+> Which Markdown preview theme would you like?
+>
+> **Light:** `github-light`, `solarized-light`, `bear`
+> **Dark:** `one-dark`, `dracula`, `nord`
 
 ### 1. Copy the CSS
 
 ```bash
-cp ~/Projects/.skills/markdown-preview/assets/markdown-preview.css <project>/.vscode/markdown-preview.css
+cp ~/.copilot/skills/markdown-preview/assets/theme-<name>.css <project>/.vscode/markdown-preview.css
+```
+
+Example for Nord:
+
+```bash
+cp ~/.copilot/skills/markdown-preview/assets/theme-nord.css .vscode/markdown-preview.css
 ```
 
 ### 2. Wire up settings.json
@@ -30,7 +54,7 @@ cp ~/Projects/.skills/markdown-preview/assets/markdown-preview.css <project>/.vs
 **If `.vscode/settings.json` does not exist:**
 
 ```bash
-cp ~/Projects/.skills/markdown-preview/assets/settings.json <project>/.vscode/settings.json
+cp ~/.copilot/skills/markdown-preview/assets/settings.json <project>/.vscode/settings.json
 ```
 
 **If `.vscode/settings.json` already exists**, merge this key:
@@ -43,12 +67,8 @@ cp ~/Projects/.skills/markdown-preview/assets/settings.json <project>/.vscode/se
 
 ### 3. Verify
 
-Open any `.md` file and toggle the preview (`⇧⌘V`). The theme should apply immediately — no restart needed.
+Open any `.md` file and toggle the preview (`⇧⌘V`). The theme applies immediately — no restart needed.
 
-## Theme summary
+## Switching themes
 
-- Soft green palette with serif body text
-- Frosted glass frame effect (`body::before`)
-- Styled `h2` with a teal bullet indicator
-- Tinted blockquotes and code blocks
-- Zebra-striped tables with hover highlight
+Re-run this skill with a different theme name. The CSS file will be overwritten.

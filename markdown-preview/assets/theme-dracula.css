@@ -1,0 +1,144 @@
+/*
+ * Markdown preview theme: Dracula
+ * Based on Dracula Theme by Zeno Rocha — https://draculatheme.com
+ */
+
+:root {
+  --bg:           #282a36;
+  --current-line: #44475a;
+  --foreground:   #f8f8f2;
+  --comment:      #6272a4;
+  --cyan:         #8be9fd;
+  --green:        #50fa7b;
+  --orange:       #ffb86c;
+  --pink:         #ff79c6;
+  --purple:       #bd93f9;
+  --red:          #ff5555;
+  --yellow:       #f1fa8c;
+  /* Mapped roles */
+  --page-bg:      var(--bg);
+  --ink:          var(--foreground);
+  --muted:        var(--comment);
+  --soft:         var(--current-line);
+  --line:         #44475a;
+  --accent:       var(--purple);
+  --accent-strong:var(--pink);
+  --accent-soft:  #2a2240;
+  --code-bg:      var(--current-line);
+  --table-head:   var(--current-line);
+}
+
+body {
+  box-sizing: border-box;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 48px 56px 72px;
+  color: var(--ink);
+  background: var(--page-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.72;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 2.2em 0 0.7em;
+  font-weight: 700;
+  line-height: 1.22;
+}
+
+h1 {
+  margin-top: 0;
+  padding-bottom: 0.4em;
+  border-bottom: 2px solid var(--line);
+  font-size: 2rem;
+  color: var(--pink);
+}
+
+h2 {
+  font-size: 1.5rem;
+  color: var(--purple);
+}
+
+h3 { font-size: 1.2rem; color: var(--cyan); }
+h4, h5, h6 { color: var(--foreground); }
+
+p { margin: 0 0 1.2em; }
+
+a { color: var(--cyan); text-decoration: none; }
+a:hover { color: var(--green); text-decoration: underline; }
+
+strong { color: var(--pink); }
+em { color: var(--yellow); font-style: italic; }
+
+code {
+  padding: 0.2em 0.45em;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--orange);
+  font-family: ui-monospace, "Fira Code", Consolas, monospace;
+  font-size: 0.875em;
+  border: 1px solid #5a5e72;
+}
+
+pre {
+  padding: 18px 20px;
+  border-radius: 8px;
+  background: var(--code-bg);
+  border: 1px solid #5a5e72;
+  overflow-x: auto;
+}
+
+pre code {
+  padding: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.9em;
+  border: none;
+}
+
+blockquote {
+  margin: 1.2em 0;
+  padding: 0.4em 1.2em;
+  border-left: 4px solid var(--purple);
+  background: rgba(68, 71, 90, 0.4);
+  color: #c8c8c8;
+  border-radius: 0 6px 6px 0;
+}
+
+hr {
+  margin: 2em 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95em;
+}
+
+th {
+  padding: 9px 14px;
+  background: var(--table-head);
+  border: 1px solid #5a5e72;
+  font-weight: 700;
+  text-align: left;
+  color: var(--purple);
+}
+
+td {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+}
+
+tr:nth-child(even) { background: rgba(68, 71, 90, 0.3); }
+tr:hover { background: rgba(68, 71, 90, 0.6); }
+
+img { max-width: 100%; border-radius: 6px; }
+
+ul, ol { padding-left: 2em; margin: 0.4em 0 1em; }
+li { margin: 0.3em 0; }
