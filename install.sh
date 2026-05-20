@@ -16,24 +16,35 @@ DEFAULT_DIRS=(
 )
 
 # ── colors ───────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+RED='\033[0;31m';    GREEN='\033[0;32m';    YELLOW='\033[1;33m'
+CYAN='\033[0;36m';   MAGENTA='\033[0;35m';  BLUE='\033[0;34m'
+BOLD='\033[1m';      DIM='\033[2m';          RESET='\033[0m'
 
-info()    { echo -e "${CYAN}→${RESET} $*"; }
-success() { echo -e "${GREEN}✓${RESET} $*"; }
-warn()    { echo -e "${YELLOW}!${RESET} $*"; }
-error()   { echo -e "${RED}✗${RESET} $*" >&2; exit 1; }
+info()    { echo -e "${CYAN}🔹 →${RESET}  $*"; }
+success() { echo -e "${GREEN}✅${RESET}  $*"; }
+warn()    { echo -e "${YELLOW}⚠️  ${RESET}  $*"; }
+error()   { echo -e "${RED}❌${RESET}  $*" >&2; exit 1; }
+divider() { echo -e "${DIM}  ────────────────────────────────────────${RESET}"; }
+banner()  {
+  echo ""
+  echo -e "${BOLD}${MAGENTA}  ╭──────────────────────────────────────╮${RESET}"
+  echo -e "${BOLD}${MAGENTA}  │${RESET}   ${BOLD}${CYAN}🚀  Skills Installer  ✨${RESET}           ${BOLD}${MAGENTA}│${RESET}"
+  echo -e "${BOLD}${MAGENTA}  ╰──────────────────────────────────────╯${RESET}"
+  echo ""
+}
 
 usage() {
-  echo -e "${BOLD}Usage:${RESET}"
-  echo "  install.sh                          # interactive mode"
-  echo "  install.sh --all                    # install all skills"
-  echo "  install.sh <skill> [<skill>…]       # install specific skills"
   echo ""
-  echo -e "${BOLD}Options:${RESET}"
-  echo "  --dir <path>  Installation path (skips the prompt)"
-  echo "  --list        List available skills in the repo"
-  echo "  --help        Show this help"
+  echo -e "  ${BOLD}${CYAN}Usage:${RESET}"
+  echo -e "  ${BOLD}install.sh${RESET}                          ${DIM}# interactive mode${RESET}"
+  echo -e "  ${BOLD}install.sh ${YELLOW}--all${RESET}                    ${DIM}# install all skills${RESET}"
+  echo -e "  ${BOLD}install.sh ${MAGENTA}<skill> [<skill>…]${RESET}       ${DIM}# install specific skills${RESET}"
+  echo ""
+  echo -e "  ${BOLD}${CYAN}Options:${RESET}"
+  echo -e "  ${YELLOW}--dir${RESET} ${MAGENTA}<path>${RESET}  Installation path (skips the prompt)"
+  echo -e "  ${YELLOW}--list${RESET}        List available skills in the repo"
+  echo -e "  ${YELLOW}--help${RESET}        Show this help"
+  echo ""
   exit 0
 }
 
@@ -46,15 +57,18 @@ prompt_install_dir() {
   fi
 
   echo ""
-  echo -e "${BOLD}Where do you want to install the skills?${RESET}"
+  divider
+  echo -e "  ${BOLD}${CYAN}📂  Where do you want to install the skills?${RESET}"
+  divider
+  echo ""
   for i in "${!dirs[@]}"; do
     local label="${dirs[$i]}"
     [[ "$label" == "$PWD" ]] && label="$label  ${YELLOW}(current directory)${RESET}"
-    printf "  %d) %s\n" "$((i+1))" "$label"
+    echo -e "  ${CYAN}$((i+1)))${RESET}  $label"
   done
-  echo "  c) Custom path"
+  echo -e "  ${CYAN}c)${RESET}  Custom path"
   echo ""
-  read -rp "Select option [1]: " choice
+  read -rp "$(echo -e "  ${BOLD}Select option${RESET} ${DIM}[1]${RESET}: ")" choice
   choice="${choice:-1}"
 
   if [[ "$choice" == "c" || "$choice" == "C" ]]; then
@@ -117,13 +131,16 @@ interactive_select() {
   SELECTED_SKILLS=()
   local skills=("$@")
   echo ""
-  echo -e "${BOLD}Available skills:${RESET}"
-  for i in "${!skills[@]}"; do
-    printf "  %2d) %s\n" "$((i+1))" "${skills[$i]}"
-  done
-  echo "   a) All"
+  divider
+  echo -e "  ${BOLD}${CYAN}📦  Available skills:${RESET}"
+  divider
   echo ""
-  read -rp "Select number(s) separated by spaces (or 'a' for all): " input
+  for i in "${!skills[@]}"; do
+    echo -e "  ${CYAN}$((i+1)))${RESET}  ${BOLD}${skills[$i]}${RESET}"
+  done
+  echo -e "  ${CYAN}a)${RESET}  ${BOLD}All${RESET}"
+  echo ""
+  read -rp "$(echo -e "  ${BOLD}Select number(s)${RESET} ${DIM}separated by spaces (or 'a' for all)${RESET}: ")" input
 
   if [[ "$input" == "a" ]]; then
     SELECTED_SKILLS=("${skills[@]}")
@@ -156,6 +173,7 @@ main() {
     shift
   done
 
+  banner
   fetch_repo
   available=()
   while IFS= read -r line; do
@@ -167,8 +185,15 @@ main() {
   fi
 
   if [[ "$mode" == "list" ]]; then
-    echo -e "${BOLD}Available skills in the repo:${RESET}"
-    printf '  %s\n' "${available[@]}"
+    echo ""
+    divider
+    echo -e "  ${BOLD}${CYAN}📦  Available skills in the repo:${RESET}"
+    divider
+    echo ""
+    for skill in "${available[@]}"; do
+      echo -e "  ${CYAN}•${RESET}  ${BOLD}${skill}${RESET}"
+    done
+    echo ""
     return
   fi
 
@@ -197,7 +222,10 @@ main() {
   esac
 
   echo ""
-  success "Done. Skills installed to: $INSTALL_DIR"
+  divider
+  success "${BOLD}Done!${RESET}  Skills installed in: ${CYAN}${INSTALL_DIR}${RESET}  🎉"
+  divider
+  echo ""
 }
 
 main "$@"
