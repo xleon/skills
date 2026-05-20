@@ -52,7 +52,7 @@ prompt_install_dir() {
     [[ "$label" == "$PWD" ]] && label="$label  ${YELLOW}(current directory)${RESET}"
     printf "  %d) %s\n" "$((i+1))" "$label"
   done
-  echo "   c) Custom path"
+  echo "  c) Custom path"
   echo ""
   read -rp "Select option [1]: " choice
   choice="${choice:-1}"
