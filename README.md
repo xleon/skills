@@ -30,5 +30,6 @@ cd skills
 
 | Skill | Description |
 |---|---|
-| `markdown-to-pdf` | Convert Markdown to PDF via Playwright |
-| `markdown-preview` | Styled VS Code Markdown preview theme |
+| [`markdown-to-pdf`](markdown-to-pdf/) | Convert Markdown to PDF via Playwright |
+| [`markdown-preview`](markdown-preview/) | Styled VS Code Markdown preview themes |
+| [`solvency-study`](solvency-study/) | Assess rental applicant solvency from project documents |
