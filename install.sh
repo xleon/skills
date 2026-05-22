@@ -108,6 +108,41 @@ list_skills() {
     | sort
 }
 
+skill_description() {
+  local skill="$1"
+  local file="$TMP_DIR/repo/$skill/$SKILL_MARKER"
+  local desc=""
+
+  [[ -f "$file" ]] || {
+    echo "No description available."
+    return
+  }
+
+  # Read YAML frontmatter description from SKILL.md when present.
+  desc=$(awk '
+    $0=="---" {
+      if (!frontmatter_started) {
+        frontmatter_started=1
+        next
+      }
+      exit
+    }
+    frontmatter_started && /^[[:space:]]*description:[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]*description:[[:space:]]*/, "", line)
+      gsub(/^"|"$/, "", line)
+      print line
+      exit
+    }
+  ' "$file")
+
+  if [[ -z "$desc" ]]; then
+    echo "No description available."
+  else
+    echo "$desc"
+  fi
+}
+
 # ── install a skill ──────────────────────────────────────────────────────────
 install_skill() {
   local skill="$1"
@@ -136,7 +171,10 @@ interactive_select() {
   divider
   echo ""
   for i in "${!skills[@]}"; do
-    echo -e "  ${CYAN}$((i+1)))${RESET}  ${BOLD}${skills[$i]}${RESET}"
+    local skill="${skills[$i]}"
+    local desc
+    desc="$(skill_description "$skill")"
+    echo -e "  ${CYAN}$((i+1)))${RESET}  ${BOLD}${skill}${RESET} ${DIM}- ${desc}${RESET}"
   done
   echo -e "  ${CYAN}a)${RESET}  ${BOLD}All${RESET}"
   echo ""
@@ -191,7 +229,9 @@ main() {
     divider
     echo ""
     for skill in "${available[@]}"; do
-      echo -e "  ${CYAN}•${RESET}  ${BOLD}${skill}${RESET}"
+      local desc
+      desc="$(skill_description "$skill")"
+      echo -e "  ${CYAN}•${RESET}  ${BOLD}${skill}${RESET} ${DIM}- ${desc}${RESET}"
     done
     echo ""
     return
