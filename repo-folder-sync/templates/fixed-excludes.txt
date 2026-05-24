@@ -1,0 +1,9 @@
+.git
+.gitignore
+.gitattributes
+.gitmodules
+.github
+.vscode
+.tools
+.tools/repo-folder-sync/state
+.tools/repo-folder-sync/logs
