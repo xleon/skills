@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# When run via bash <(curl ...) stdin is not the terminal — fix it
-[[ ! -t 0 ]] && exec </dev/tty
+# When run via bash <(curl ...) stdin is not the terminal — try to fix it.
+# Some environments (CI, containers) don't have a usable /dev/tty, so tolerate failure.
+if [[ ! -t 0 ]]; then
+  { exec </dev/tty; } 2>/dev/null || true
+fi
 
 REPO_URL="https://github.com/xleon/skills"
 INSTALL_DIR=""
 SKILL_MARKER="SKILL.md"
 
 DEFAULT_DIRS=(
+  "$HOME/.codex/skills"
   "$HOME/.copilot/skills"
   "$HOME/.cursor/skills"
   "$HOME/.claude/skills"
