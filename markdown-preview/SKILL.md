@@ -1,6 +1,6 @@
 ---
 name: markdown-preview
-description: "Customize VS Code Markdown preview with a styled theme. Use when: personalizar vista previa markdown, markdown preview theme, add CSS to markdown preview, custom markdown styles, vista previa bonita."
+description: "Customize VS Code Markdown preview with a styled theme. Use when: customize markdown preview, markdown preview theme, add CSS to markdown preview, custom markdown styles, prettier markdown preview."
 argument-hint: "<theme-name> <project-root> (theme and project are optional)"
 ---
 

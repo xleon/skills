@@ -33,4 +33,5 @@ cd skills
 | [`markdown-to-pdf`](markdown-to-pdf/) | Convert Markdown to PDF via Playwright |
 | [`markdown-preview`](markdown-preview/) | Styled VS Code Markdown preview themes |
 | [`repo-folder-sync`](repo-folder-sync/) | Set up automatic bidirectional sync between a Git repo and a local folder on macOS |
+| [`semantic-organizer`](semantic-organizer/) | Classify, rename, and reorganize documents with dry-run safety |
 | [`solvency-study`](solvency-study/) | Assess rental applicant solvency from project documents |

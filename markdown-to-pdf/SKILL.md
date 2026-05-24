@@ -1,6 +1,6 @@
 ---
 name: markdown-to-pdf
-description: "Generate a PDF from a Markdown file using the shared markdown_to_pdf.py script (Playwright + markdown). Use when: generating PDF, converting markdown to PDF, exportar PDF, genera PDF, render document as PDF."
+description: "Generate a PDF from a Markdown file using the shared markdown_to_pdf.py script (Playwright + markdown). Use when: generating PDF, converting markdown to PDF, export PDF, generate PDF, render document as PDF."
 argument-hint: "<path/to/file.md>"
 ---
 

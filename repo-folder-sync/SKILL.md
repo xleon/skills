@@ -44,7 +44,7 @@ bash repo-folder-sync/setup-repo-sync.sh <repo-path> <destination-path> [launcha
 Examples:
 
 ```bash
-bash repo-folder-sync/setup-repo-sync.sh ../Coches ../Sync/Coches
+bash repo-folder-sync/setup-repo-sync.sh ../Cars ../Sync/Cars
 
 bash repo-folder-sync/setup-repo-sync.sh ../MyRepo ../Sync/MyRepo com.user.myrepo-folder-sync
 ```

@@ -43,7 +43,7 @@ usage() {
   echo ""
   echo -e "  ${BOLD}${CYAN}Options:${RESET}"
   echo -e "  ${YELLOW}--dir${RESET} ${MAGENTA}<path>${RESET}  Installation path (skips the prompt)"
-  echo -e "  ${YELLOW}--list${RESET}        List available skills in the repo"
+  echo -e "  ${YELLOW}--list${RESET}        List available skills in the repo with descriptions"
   echo -e "  ${YELLOW}--help${RESET}        Show this help"
   echo ""
   exit 0

@@ -237,20 +237,12 @@ If user confirms reorganization, suggested structure:
 - Use the user's report language for folder names, unless the user asks for a specific language.
 - Preserve existing project naming language when adding folders into an established structure.
 - Default examples:
-  - For Spanish output:
-    - `01_identidad_y_contratos/`
-    - `02_ingresos/`
-    - `03_riesgo_deuda_morosidad/`
-    - `04_soporte_empresa/`
-    - `05_informes_generados/`
-    - `99_pendiente_revision/`
-  - For English output:
-    - `01_identity_and_contracts/`
-    - `02_income/`
-    - `03_debt_and_default_risk/`
-    - `04_company_support/`
-    - `05_generated_reports/`
-    - `99_pending_review/`
+  - `01_identity_and_contracts/`
+  - `02_income/`
+  - `03_debt_and_default_risk/`
+  - `04_company_support/`
+  - `05_generated_reports/`
+  - `99_pending_review/`
 
 Rules:
 
