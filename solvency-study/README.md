@@ -17,7 +17,7 @@ You can start with a minimal prompt. If required parameters are missing, the ski
 
 Example minimal prompt:
 
-Use solvency-study for Carlos and Ariadna in Las Marinas contracts folder.
+Use solvency-study for Alice and Bob in the Seaside contracts folder.
 
 The skill will ask only what is missing, typically:
 
