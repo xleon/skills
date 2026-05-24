@@ -10,7 +10,7 @@ Installs a reusable sync stack in any repository:
 
 - Bidirectional sync using `unison`
 - Automatic file watching using `fswatch`
-- Optional persistence with `launchd`
+- Persistent auto-sync with `launchd` enabled by default after successful setup
 - Static Git exclusions (`.git`, `.gitignore`, `.gitattributes`, `.gitmodules`, `.github`)
 - Dynamic exclusions from `.gitignore` via `git check-ignore --no-index`
 - Automatically ensures `.gitignore` includes runtime paths for `.tools/repo-folder-sync/state/` and `.tools/repo-folder-sync/logs/`
@@ -20,7 +20,7 @@ Installs a reusable sync stack in any repository:
 
 ## Canonical path
 
-`/Users/xleon/Projects/.skills/repo-folder-sync`
+`repo-folder-sync`
 
 ## Mandatory interaction rule
 
@@ -29,18 +29,24 @@ Installs a reusable sync stack in any repository:
 - If destination path is missing or ambiguous, ask the user for the exact folder and wait for the answer before running any setup command.
 - If proposing examples, present them only as examples and explicitly request the real destination path to use.
 
+## Activation policy
+
+- After a successful bootstrap and initial sync validation, activate persistent auto-sync by running `.tools/repo-folder-sync/install-launchagent.sh` without asking for extra confirmation.
+- Do not ask the user whether to enable auto-sync unless the user explicitly requested manual mode or asked to decide later.
+- If activation fails, report the error and leave manual sync available via `.tools/repo-folder-sync/sync.sh` and `.tools/repo-folder-sync/watch.sh`.
+
 ## Usage
 
 ```bash
-bash /Users/xleon/Projects/.skills/repo-folder-sync/setup-repo-sync.sh <repo-path> <destination-path> [launchagent-label]
+bash repo-folder-sync/setup-repo-sync.sh <repo-path> <destination-path> [launchagent-label]
 ```
 
 Examples:
 
 ```bash
-bash /Users/xleon/Projects/.skills/repo-folder-sync/setup-repo-sync.sh /Users/xleon/Projects/Coches /Users/xleon/Sync/Coches
+bash repo-folder-sync/setup-repo-sync.sh ../Coches ../Sync/Coches
 
-bash /Users/xleon/Projects/.skills/repo-folder-sync/setup-repo-sync.sh /Users/xleon/Projects/MyRepo /Users/xleon/Sync/MyRepo com.user.myrepo-folder-sync
+bash repo-folder-sync/setup-repo-sync.sh ../MyRepo ../Sync/MyRepo com.user.myrepo-folder-sync
 ```
 
 ## After bootstrap
@@ -50,9 +56,14 @@ Run in target repo:
 ```bash
 .tools/repo-folder-sync/sync.sh --dry-run
 .tools/repo-folder-sync/sync.sh
-.tools/repo-folder-sync/watch.sh
-.tools/repo-folder-sync/status.sh
 .tools/repo-folder-sync/install-launchagent.sh
+.tools/repo-folder-sync/status.sh
+```
+
+Manual/on-demand mode (only when explicitly requested):
+
+```bash
+.tools/repo-folder-sync/watch.sh
 ```
 
 Disable background auto-sync when needed:
