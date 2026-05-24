@@ -1,6 +1,6 @@
 ---
 name: repo-folder-sync
-description: "Set up automatic bidirectional sync between a Git repo and any local destination folder on macOS, excluding Git-related paths and everything matched by .gitignore."
+description: "Set up automatic bidirectional sync between a Git repo and a local folder on macOS"
 argument-hint: "<repo-path> <destination-path> [launchagent-label]"
 ---
 
