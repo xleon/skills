@@ -2,6 +2,16 @@
 
 This setup synchronizes a git repository with any local destination folder using `unison`.
 
+It is especially useful when the destination folder is managed by a cloud sync client, so your repository can stay in sync with Dropbox and similar services.
+
+Common destination examples:
+
+- Dropbox
+- Google Drive for desktop
+- OneDrive
+- iCloud Drive
+- Syncthing-managed folders
+
 ## Behavior
 
 - Bidirectional synchronization.
