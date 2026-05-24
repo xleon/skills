@@ -1,7 +1,7 @@
 ---
 name: repo-folder-sync
 description: "Set up automatic bidirectional sync between a Git repo and a local folder on macOS"
-argument-hint: "<repo-path> <destination-path> [launchagent-label]"
+argument-hint: "<repo-path> <destination-path-required> [launchagent-label]"
 ---
 
 # Repo Folder Sync
@@ -21,6 +21,13 @@ Installs a reusable sync stack in any repository:
 ## Canonical path
 
 `/Users/xleon/Projects/.skills/repo-folder-sync`
+
+## Mandatory interaction rule
+
+- The destination path must always be provided explicitly by the user.
+- Never infer, auto-complete, or propose a default destination path and execute it without user confirmation.
+- If destination path is missing or ambiguous, ask the user for the exact folder and wait for the answer before running any setup command.
+- If proposing examples, present them only as examples and explicitly request the real destination path to use.
 
 ## Usage
 

@@ -1,9 +1,0 @@
-.git
-.gitignore
-.gitattributes
-.gitmodules
-.github
-.vscode
-.tools
-.tools/dropbox-sync/state
-.tools/dropbox-sync/logs
