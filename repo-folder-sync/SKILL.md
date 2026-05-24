@@ -14,8 +14,9 @@ Installs a reusable sync stack in any repository:
 - Static Git exclusions (`.git`, `.gitignore`, `.gitattributes`, `.gitmodules`, `.github`)
 - Dynamic exclusions from `.gitignore` via `git check-ignore --no-index`
 - Automatically ensures `.gitignore` includes runtime paths for `.tools/repo-folder-sync/state/` and `.tools/repo-folder-sync/logs/`
-- LaunchAgent runs with process name `repo-folder-sync` for easier identification in macOS background activity
+- LaunchAgent runs with process name `repo-folder-sync-[folder]` where folder is sanitized (a-z, 0-9, '-') and shortened for readability
 - Installer/uninstaller performs best-effort cleanup of legacy `*-dropbox-sync` launchd entries
+- Launcher file name follows the same pattern: `repo-folder-sync-[folder]`
 
 ## Canonical path
 

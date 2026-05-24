@@ -3,5 +3,27 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Friendly argv[0] so process/background UI shows repo-folder-sync.
-exec -a repo-folder-sync /bin/bash "$SCRIPT_DIR/watch.sh"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/config.env"
+
+raw_folder_name="$(basename "$SRC_ROOT")"
+sanitized_folder_name="$(printf '%s' "$raw_folder_name" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-')"
+sanitized_folder_name="${sanitized_folder_name#-}"
+sanitized_folder_name="${sanitized_folder_name%-}"
+
+if [[ -z "$sanitized_folder_name" ]]; then
+	sanitized_folder_name="repo"
+fi
+
+# Keep process names short and readable in macOS background activity UI.
+short_folder_name="${sanitized_folder_name:0:20}"
+short_folder_name="${short_folder_name%-}"
+
+if [[ -z "$short_folder_name" ]]; then
+	short_folder_name="repo"
+fi
+
+process_name="repo-folder-sync-$short_folder_name"
+
+# Friendly argv[0] so process/background UI shows repo-folder-sync-[folder].
+exec -a "$process_name" /bin/bash "$SCRIPT_DIR/watch.sh"

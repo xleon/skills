@@ -6,16 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.env"
 
 PLIST_TARGET="$HOME/Library/LaunchAgents/$LAUNCH_AGENT_LABEL.plist"
-OLD_LABEL="com.user.$(basename "$SRC_ROOT" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9.-' '-')-dropbox-sync"
-OLD_PLIST_TARGET="$HOME/Library/LaunchAgents/$OLD_LABEL.plist"
 
 mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
-chmod +x "$SCRIPT_DIR/$LAUNCHER_NAME" "$SCRIPT_DIR/watch.sh"
-
-# Best effort cleanup from old naming to avoid stale background items.
-launchctl bootout "gui/$(id -u)/$OLD_LABEL" >/dev/null 2>&1 || true
-launchctl unload "$OLD_PLIST_TARGET" >/dev/null 2>&1 || true
-rm -f "$OLD_PLIST_TARGET"
 
 cat > "$PLIST_TARGET" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -27,7 +19,8 @@ cat > "$PLIST_TARGET" <<EOF
 
   <key>ProgramArguments</key>
   <array>
-    <string>$SCRIPT_DIR/$LAUNCHER_NAME</string>
+    <string>/bin/bash</string>
+    <string>$SCRIPT_DIR/watch.sh</string>
   </array>
 
   <key>EnvironmentVariables</key>

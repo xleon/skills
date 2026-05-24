@@ -67,7 +67,9 @@ The bootstrap script adds these entries to `.gitignore` (if missing):
 
 ## Background process identity
 
-- LaunchAgent starts a launcher named `repo-folder-sync`, so it is easier to identify in macOS background activity.
+- LaunchAgent starts a process named `repo-folder-sync-[folder]`.
+- `folder` is derived from the repository folder name, sanitized to `a-z`, `0-9`, `-`, and shortened for readability.
+- Launcher script filename also uses this pattern: `repo-folder-sync-[folder]`.
 - Install/uninstall scripts also perform best-effort cleanup of legacy `*-dropbox-sync` launchd entries.
 
 ## Dynamic `.gitignore` resolution
