@@ -39,6 +39,7 @@ usage() {
   echo -e "  ${BOLD}install.sh${RESET}                          ${DIM}# interactive mode${RESET}"
   echo -e "  ${BOLD}install.sh ${YELLOW}--all${RESET}                    ${DIM}# install all skills${RESET}"
   echo -e "  ${BOLD}install.sh ${MAGENTA}<skill> [<skill>…]${RESET}       ${DIM}# install specific skills${RESET}"
+  echo -e "  ${BOLD}install.sh ${MAGENTA}repo-folder-sync${RESET}          ${DIM}# install the repo sync skill${RESET}"
   echo ""
   echo -e "  ${BOLD}${CYAN}Options:${RESET}"
   echo -e "  ${YELLOW}--dir${RESET} ${MAGENTA}<path>${RESET}  Installation path (skips the prompt)"
