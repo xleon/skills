@@ -11,21 +11,17 @@ CANDIDATES_FILE="$STATE_DIR/candidates.txt"
 IGNORED_FILE="$STATE_DIR/dynamic-ignored-paths.txt"
 OUTPUT_FILE="$STATE_DIR/dynamic-unison-ignores.txt"
 
-{
-  cd "$SRC_ROOT"
-  find . -mindepth 1 -print 2>/dev/null | sed 's#^\./##' || true
-
-  if [[ -d "$DST_ROOT" ]]; then
-    cd "$DST_ROOT"
-    find . -mindepth 1 -print 2>/dev/null | sed 's#^\./##' || true
-  fi
-} | awk 'NF' | sort -u > "$CANDIDATES_FILE"
-
-if [[ -s "$CANDIDATES_FILE" ]]; then
-  git -C "$SRC_ROOT" check-ignore --no-index --stdin < "$CANDIDATES_FILE" | sort -u > "$IGNORED_FILE" || true
-else
-  : > "$IGNORED_FILE"
-fi
+# Check only top-level entries (.venv, __pycache__, .DS_Store, etc.) instead
+# of every file inside ignored trees — avoids "Argument list too long" in
+# unison when .venv/ contains thousands of files.
+cd "$SRC_ROOT"
+> "$IGNORED_FILE"
+for entry in * .*; do
+  [[ "$entry" == "." || "$entry" == ".." ]] && continue
+  git check-ignore -q "$entry" 2>/dev/null && echo "$entry" >> "$IGNORED_FILE"
+done
+sort -u -o "$IGNORED_FILE" "$IGNORED_FILE"
+: > "$CANDIDATES_FILE"
 
 {
   while IFS= read -r relpath; do
