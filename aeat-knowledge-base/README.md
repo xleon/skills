@@ -17,6 +17,9 @@ the AEAT sede. The cache is refreshed at most every 10 days.
   consolidada) and converts them to Markdown with `pypdf`.
 - Caches everything under `cache/<domain>/<slug>.md` as one structured `.md` per page.
 - Refreshes when the per-domain `last_refresh` is older than 10 days, or when forced.
+- **Semantic search** over the cache via `scripts/search_aeat.py` (multilingual
+  sentence-transformers via `fastembed`); the index is built on demand and
+  self-maintains after every `refresh` / `url`.
 
 ## CLI
 
@@ -24,6 +27,11 @@ the AEAT sede. The cache is refreshed at most every 10 days.
 uv run scripts/fetch_aeat.py status
 uv run scripts/fetch_aeat.py refresh [--scope irpf|iva|vivienda|all] [--skip-pdfs] [--force] [--keep-orphans]
 uv run scripts/fetch_aeat.py url <url> [--skip-pdfs]
+uv run scripts/fetch_aeat.py verify [--fix]
+uv run scripts/fetch_aeat.py index  [--force] [--scope X|all]
+uv run scripts/search_aeat.py build [--force] [--scope X|all]
+uv run scripts/search_aeat.py search "<query>" [--domain X] [--k 5] [--json]
+uv run scripts/search_aeat.py stats
 ```
 
 `status`
@@ -44,6 +52,8 @@ uv run scripts/fetch_aeat.py url <url> [--skip-pdfs]
   exits 0 with a warning on stderr (so the calling agent still has content).
 - Total failure on a domain does **not** advance `last_refresh`; the prior
   timestamp is preserved so the next refresh can retry sooner than 10 days.
+- After a successful refresh, the semantic-search index is rebuilt automatically
+  if it already exists. First-time users pay no embedding cost.
 
 `url <url>`
 
@@ -51,6 +61,20 @@ uv run scripts/fetch_aeat.py url <url> [--skip-pdfs]
 - Only HTTPS URLs on `sede.agenciatributaria.gob.es` are accepted.
 - Any query string or fragment in the URL is stripped from the cached `> Source:`
   header (the URL itself is fetched in full).
+- Triggers an automatic index rebuild if the semantic index already exists.
+
+`index`
+
+- Builds (or rebuilds with `--force`) the semantic-search index.
+- Delegates to `scripts/search_aeat.py build`; the index covers every cached page.
+
+`search_aeat.py search`
+
+- Runs a multilingual semantic query against the index.
+- Returns up to `--k` chunks (default 5) with score, source URL, domain,
+  page title, heading path, and snippet.
+- `--domain irpf|iva|vivienda|on-demand` restricts retrieval to one section.
+- Use the source URL of the top result(s) as the citation when answering.
 
 ## Cache layout
 
@@ -58,6 +82,9 @@ uv run scripts/fetch_aeat.py url <url> [--skip-pdfs]
 cache/
 ├── .gitkeep
 ├── .state.json                       # per-domain last_refresh
+├── .embeddings.npy                   # float32 chunk embeddings (semantic index)
+├── .chunks.jsonl                     # chunk metadata (semantic index)
+├── .search_meta.json                 # model, built_at, num_chunks, dim
 ├── irpf/
 │   ├── irpf.md
 │   ├── renta.md
@@ -78,8 +105,12 @@ traceable origin.
 - Python ≥ 3.10 (PEP 604 union syntax).
 - `uv` — runtime dependency manager.
 - `pypdf` + `cryptography` — pulled in transparently via PEP 723 metadata by
-  `uv run`. `cryptography` is required by `pypdf` to decrypt AES-encrypted PDFs
-  (the AEAT "Manual práctico" PDFs use this).
+  `uv run scripts/fetch_aeat.py …`. `cryptography` is required by `pypdf` to
+  decrypt AES-encrypted PDFs (the AEAT "Manual práctico" PDFs use this).
+- `numpy` + `fastembed` — pulled in transparently for the `index` /
+  `search` commands. First run downloads
+  `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (~220 MB)
+  into `~/.cache/fastembed/`; subsequent runs reuse it.
 
 No other third-party packages.
 
@@ -110,4 +141,13 @@ domain routing logic:
 ```bash
 uv run scripts/fetch_aeat.py verify         # dry-run
 uv run scripts/fetch_aeat.py verify --fix    # move misfiled files + register unregistered ones
+```
+
+The semantic search index is exercised by `tests/test_search_aeat.py`:
+it builds an isolated mini-cache from inline fixtures, embeds it, and
+checks that the top hit for each canonical query points to the expected
+domain. The first run downloads the embedding model (~220 MB).
+
+```bash
+uv run tests/test_search_aeat.py
 ```
