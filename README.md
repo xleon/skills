@@ -35,3 +35,5 @@ cd skills
 | [`repo-folder-sync`](repo-folder-sync/) | Set up automatic bidirectional sync between a Git repo and a local folder on macOS |
 | [`semantic-organizer`](semantic-organizer/) | Classify, rename, and reorganize documents with dry-run safety |
 | [`solvency-study`](solvency-study/) | Assess rental applicant solvency from project documents |
+| [`opendataloader-ocr-integration`](opendataloader-ocr-integration/) | Install and run opendataloader-pdf as a high-accuracy OCR backend in any uv-managed Python project (interactive, project-agnostic) |
+| [`aeat-knowledge-base`](aeat-knowledge-base/) | Answer Spanish fiscal questions (IRPF, IVA, vivienda, modelos, Verifactu) from a locally cached snapshot of sede.agenciatributaria.gob.es, refreshed every 10 days |
