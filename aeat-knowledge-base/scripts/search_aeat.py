@@ -82,13 +82,19 @@ class Chunk:
 # ----------------------------- Cache parsing -----------------------------------
 
 def _read_header_field(path: Path, field: str) -> str | None:
-    """Find a `> Field: value` line in a cached `.md`."""
+    """Find a `> Field: value` line in a cached `.md`.
+
+    `fetch_aeat.write_cache_file` wraps URLs in `<…>`; strip them so the
+    stored value is the bare URL the citation needs."""
     prefix = f"> {field}:"
     try:
         for line in path.read_text(encoding="utf-8").splitlines():
             s = line.strip()
             if s.startswith(prefix):
-                return s[len(prefix):].strip()
+                value = s[len(prefix):].strip()
+                if len(value) >= 2 and value.startswith("<") and value.endswith(">"):
+                    value = value[1:-1]
+                return value
     except OSError:
         return None
     return None
@@ -97,10 +103,21 @@ def _read_header_field(path: Path, field: str) -> str | None:
 # Suppress the "mean pooling instead of CLS embedding" advisory emitted by
 # fastembed >= 0.6 for `paraphrase-multilingual-MiniLM-L12-v2`. Behaviour is
 # unchanged (and arguably better with mean pooling); the message is noisy.
+# fastembed occasionally re-installs its own filters on TextEmbedding()
+# instantiation, so we re-apply this filter inside `build_index` and
+# `search` to keep the CLI output clean.
 warnings.filterwarnings(
     "ignore",
-    message=r".*now uses mean pooling instead of CLS embedding.*",
+    message=r".*mean pooling instead of CLS embedding.*",
 )
+
+
+def _silence_mean_pool_warning() -> None:
+    """Re-apply the filter after `fastembed` has reset it."""
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*mean pooling instead of CLS embedding.*",
+    )
 
 # ----------------------------- Cache parsing -----------------------------------
 
@@ -232,7 +249,11 @@ def build_index(force: bool = False, scope: str = "all", verbose: bool = True) -
 
     from fastembed import TextEmbedding  # imported lazily: keeps cold import cheap
 
+    # fastembed re-installs warning filters when TextEmbedding is constructed;
+    # re-silence BEFORE the warning can fire.
+    _silence_mean_pool_warning()
     embedder = TextEmbedding(model_name=EMBED_MODEL)
+    _silence_mean_pool_warning()
     t0 = time.time()
     vecs = list(embedder.embed([c.text for c in chunks], batch_size=32, parallel=0))
     arr = np.asarray(vecs, dtype=np.float32)
@@ -287,7 +308,9 @@ def search(
     from fastembed import TextEmbedding
 
     arr, chunks, meta = load_index()
+    _silence_mean_pool_warning()
     embedder = TextEmbedding(model_name=meta["model"])
+    _silence_mean_pool_warning()
     q_vec = np.asarray(list(embedder.embed([query]))[0], dtype=np.float32)
 
     a_norm = np.linalg.norm(arr, axis=1, keepdims=True)
