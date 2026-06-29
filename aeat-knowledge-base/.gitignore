@@ -1,2 +1,6 @@
 cache/*
 !cache/.gitkeep
+cache/.embeddings.npy
+cache/.chunks.jsonl
+cache/.search_meta.json
+cache/.model/
