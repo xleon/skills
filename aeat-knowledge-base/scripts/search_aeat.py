@@ -45,12 +45,20 @@ import math
 import re
 import sys
 import time
+import unicodedata
 import warnings
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
+
+# Default search mode. BM25 (stdlib-only, ~0.2 s cold) is the right default
+# for the agent workflow because every `uv run scripts/search_aeat.py
+# search …` adds a fixed ~1.7 s of Python startup + `fastembed` import
+# when the semantic path is used. Pass `--mode semantic` (or `--mode
+# hybrid`) for queries where paraphrasing beats literal token overlap.
+DEFAULT_MODE = "bm25"
 
 EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 CHUNK_WORDS = 220
@@ -283,31 +291,111 @@ def build_index(force: bool = False, scope: str = "all", verbose: bool = True) -
 
 # ----------------------------- Index load --------------------------------------
 
-def load_index() -> tuple[np.ndarray, list[Chunk], dict]:
-    if not (EMBEDDINGS_PATH.exists() and CHUNKS_PATH.exists() and META_PATH.exists()):
-        raise FileNotFoundError("no index; run `build` first")
-    arr = np.load(EMBEDDINGS_PATH)
+def load_chunks() -> list[Chunk]:
+    """Load the persisted chunk metadata. Works regardless of whether the
+    embedding matrix exists (cheap, stdlib-only — used by both modes)."""
+    if not CHUNKS_PATH.exists():
+        raise FileNotFoundError("no chunks; run `build` first (or rebuild via `refresh`)")
     chunks: list[Chunk] = []
     with CHUNKS_PATH.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
             if line:
                 chunks.append(Chunk(**json.loads(line)))
+    return chunks
+
+
+def load_index() -> tuple[np.ndarray, list[Chunk], dict]:
+    if not (EMBEDDINGS_PATH.exists() and META_PATH.exists()):
+        raise FileNotFoundError("no embedding index; run `build` first")
+    arr = np.load(EMBEDDINGS_PATH)
+    chunks = load_chunks()
     meta = json.loads(META_PATH.read_text(encoding="utf-8"))
     return arr, chunks, meta
 
 
-# ----------------------------- Search ------------------------------------------
+# ----------------------------- BM25 fallback -----------------------------------
+# Pure-stdlib BM25 so that `search` returns useful results without ever loading
+# the embedding model. Good enough for the small, focused AEAT cache and ~30x
+# faster on cold start (no `fastembed` import, ~100 ms vs ~2 s).
 
-def search(
+_BM25_K1 = 1.5
+_BM25_B = 0.75
+_BM25_TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
+def bm25_tokenize(text: str) -> list[str]:
+    """Lowercase, strip accents, tokenize on word boundaries."""
+    return _BM25_TOKEN_RE.findall(_strip_accents(text.lower()))
+
+
+def bm25_search(
     query: str,
+    chunks: list[Chunk],
+    *,
+    domain: str | None = None,
+    k: int = TOPK_DEFAULT,
+) -> list[tuple[Chunk, float]]:
+    if not chunks:
+        return []
+    query_tokens = bm25_tokenize(query)
+    if not query_tokens:
+        return []
+
+    doc_tokens = [bm25_tokenize(c.text) for c in chunks]
+    N = len(doc_tokens)
+    avgdl = sum(len(d) for d in doc_tokens) / N
+
+    # Document frequencies over all chunks (cheap: 185 docs × ~few hundred tokens).
+    df: dict[str, int] = {}
+    for doc in doc_tokens:
+        for term in set(doc):
+            df[term] = df.get(term, 0) + 1
+
+    scores: list[float] = [-math.inf] * N
+    for i, doc in enumerate(doc_tokens):
+        if domain and chunks[i].domain != domain:
+            continue
+        if not doc:
+            continue
+        dl = len(doc)
+        tf: dict[str, int] = {}
+        for t in doc:
+            tf[t] = tf.get(t, 0) + 1
+        s = 0.0
+        for qt in query_tokens:
+            f = tf.get(qt, 0)
+            if f == 0:
+                continue
+            n = df.get(qt, 0)
+            idf = math.log((N - n + 0.5) / (n + 0.5) + 1.0)
+            denom = f + _BM25_K1 * (1.0 - _BM25_B + _BM25_B * dl / avgdl)
+            s += idf * f * (_BM25_K1 + 1.0) / denom
+        scores[i] = s
+
+    topk_idx = sorted(range(N), key=lambda i: -scores[i])[:k]
+    out: list[tuple[Chunk, float]] = []
+    for i in topk_idx:
+        if scores[i] == -math.inf or scores[i] <= 0:
+            continue
+        out.append((chunks[i], scores[i]))
+    return out
+
+
+def _semantic_search(
+    query: str,
+    chunks: list[Chunk],
     *,
     domain: str | None = None,
     k: int = TOPK_DEFAULT,
 ) -> list[tuple[Chunk, float]]:
     from fastembed import TextEmbedding
 
-    arr, chunks, meta = load_index()
+    arr, _, meta = load_index()
     _silence_mean_pool_warning()
     embedder = TextEmbedding(model_name=meta["model"])
     _silence_mean_pool_warning()
@@ -317,7 +405,7 @@ def search(
     safe_a = np.where(a_norm > 0, a_norm, 1.0)
     arr_n = arr / safe_a
     q_n = q_vec / (np.linalg.norm(q_vec) or 1.0)
-    sims = arr_n @ q_n
+    sims = (arr_n @ q_n)
     if domain:
         mask = np.array([c.domain == domain for c in chunks], dtype=bool)
         sims = np.where(mask, sims, -np.inf)
@@ -329,6 +417,63 @@ def search(
             continue
         out.append((chunks[int(idx)], s))
     return out
+
+
+# ----------------------------- Search dispatcher --------------------------------
+
+def search(
+    query: str,
+    *,
+    domain: str | None = None,
+    k: int = TOPK_DEFAULT,
+    mode: str = DEFAULT_MODE,
+) -> list[tuple[Chunk, float]]:
+    """Run a search and return `(chunk, score)` pairs sorted by score desc.
+
+    `mode`:
+      - "auto"     — semantic if an index exists on disk, otherwise BM25
+      - "bm25"     — pure-Python BM25 (chunks are parsed from `cache/*.md`
+                     on demand; falls back to the persisted `.chunks.jsonl`
+                     when one exists)
+      - "semantic" — sentence-transformers cosine; raises FileNotFoundError
+                     if no embedding index exists
+      - "hybrid"   — runs both and re-ranks by reciprocal-rank fusion
+    """
+    if mode == "auto":
+        mode = "semantic" if EMBEDDINGS_PATH.exists() else "bm25"
+
+    if mode == "bm25":
+        chunks = _chunks_for_search()
+        return bm25_search(query, chunks, domain=domain, k=k)
+    if mode == "semantic":
+        chunks = _chunks_for_search()
+        return _semantic_search(query, chunks, domain=domain, k=k)
+    if mode == "hybrid":
+        chunks = _chunks_for_search()
+        sem = _semantic_search(query, chunks, domain=domain, k=max(k, 10))
+        bm = bm25_search(query, chunks, domain=domain, k=max(k, 10))
+        # Reciprocal-rank fusion.
+        seen: dict[str, float] = {}
+        by_chunk: dict[str, Chunk] = {}
+        for r, (chunk, _) in enumerate(sem):
+            by_chunk[chunk.id] = chunk
+            seen[chunk.id] = seen.get(chunk.id, 0.0) + 1.0 / (r + 60.0)
+        for r, (chunk, _) in enumerate(bm):
+            by_chunk[chunk.id] = chunk
+            seen[chunk.id] = seen.get(chunk.id, 0.0) + 1.0 / (r + 60.0)
+        ordered = sorted(seen.items(), key=lambda kv: -kv[1])
+        return [(by_chunk[cid], s) for cid, s in ordered[:k]]
+    raise ValueError(f"unknown mode: {mode!r}")
+
+
+def _chunks_for_search() -> list[Chunk]:
+    """Prefer the persisted chunks (one .jsonl parse, no .md walk). Fall back
+    to building from the live cache so BM25 works on a fresh install too."""
+    if CHUNKS_PATH.exists():
+        return load_chunks()
+    if CACHE_DIR.is_dir():
+        return build_chunks(CACHE_DIR)
+    raise FileNotFoundError("no cache found; run `fetch_aeat.py refresh` first")
 
 
 # ----------------------------- Commands ----------------------------------------
@@ -365,13 +510,14 @@ def cmd_stats(_args: argparse.Namespace) -> int:
 
 def cmd_search(args: argparse.Namespace) -> int:
     try:
-        results = search(args.query, domain=args.domain, k=args.k)
+        results = search(args.query, domain=args.domain, k=args.k, mode=args.mode)
     except FileNotFoundError as exc:
         print(str(exc), file=sys.stderr)
         return 1
     if not results:
         print("(no matches)")
         return 0
+    effective = args.mode if args.mode != "auto" else ("semantic" if EMBEDDINGS_PATH.exists() else "bm25")
     if args.json:
         payload = [
             {
@@ -385,17 +531,20 @@ def cmd_search(args: argparse.Namespace) -> int:
             }
             for chunk, score in results
         ]
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(json.dumps({"mode": effective, "results": payload}, ensure_ascii=False, indent=2))
         return 0
+    print(f"[mode={effective}, k={len(results)}]")
     for chunk, score in results:
         print(f"[{score:.3f}] {chunk.domain}/{chunk.slug}")
         print(f"  title:  {chunk.title}")
         print(f"  source: {chunk.source_url}")
         print(f"  path:   {chunk.heading_path or '(lead)'}")
-        snippet = chunk.text
-        if len(snippet) > 320:
-            snippet = snippet[:320].rstrip() + "…"
-        print(f"  text:   {snippet}")
+        # Print the whole chunk (≤CHUNK_WORDS ≈ 220 ≈ ~1400 chars). The chunk
+        # is already the unit we indexed, so the agent gets the citation-ready
+        # text in one shot and does not need a follow-up read_file.
+        print(f"  text:")
+        for line in chunk.text.splitlines() or [chunk.text]:
+            print(f"    {line}")
         print()
     return 0
 
@@ -413,10 +562,20 @@ def main() -> int:
     sub.add_parser("info", help="Print index metadata as JSON (model, built_at, num_chunks, dim, domains).")
     sub.add_parser("stats", help="Print one-line-per-field stats: model, chunk counts by domain.")
 
-    sp = sub.add_parser("search", help="Run a semantic query against the index.")
+    sp = sub.add_parser("search", help="Run a query against the chunk index.")
     sp.add_argument("query", help="Question or phrase to match.")
     sp.add_argument("--domain", help="Restrict results to one cache domain.")
     sp.add_argument("--k", type=int, default=TOPK_DEFAULT, help="Number of chunks to return (default 5).")
+    sp.add_argument(
+        "--mode",
+        choices=["auto", "bm25", "semantic", "hybrid"],
+        default=DEFAULT_MODE,
+        help=(
+            "auto=semantic if an embedding index exists on disk, else BM25. "
+            "BM25 is stdlib-only and ~30x faster on cold start; "
+            "semantic requires `build`. hybrid re-ranks both."
+        ),
+    )
     sp.add_argument("--json", action="store_true", help="Emit JSON instead of human-readable text.")
 
     args = p.parse_args()
