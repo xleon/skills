@@ -1,7 +1,16 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["pypdf", "cryptography"]
+# dependencies = [
+#     "pypdf",
+#     "cryptography",
+#     # Optional: only needed by the `index` subcommand and the auto-reindex
+#     # hook after a successful `refresh` / `url`. `uv run` skips the install
+#     # when `index` is never invoked (status / verify / refresh without
+#     # reindex still work without these).
+#     "numpy",
+#     "fastembed",
+# ]
 # ///
 """
 Cache helper for the `aeat-knowledge-base` skill.
@@ -15,6 +24,9 @@ Commands:
     uv run scripts/fetch_aeat.py status
     uv run scripts/fetch_aeat.py refresh [--scope irpf|iva|vivienda|all] [--skip-pdfs] [--force] [--keep-orphans]
     uv run scripts/fetch_aeat.py url <url> [--skip-pdfs]
+    uv run scripts/fetch_aeat.py verify [--fix]             # cross-check disk vs .state.json
+    uv run scripts/fetch_aeat.py index  [--force] [--scope X|all]
+                                               # rebuild the semantic-search index
 
 Cache layout:
 
@@ -404,6 +416,40 @@ def _is_stale(state: dict, domain: str) -> bool:
     return datetime.now(timezone.utc).astimezone() - last > timedelta(days=ttl_days)
 
 
+# ----------------------------- Optional search index hook ----------------------
+
+# `fetch_aeat` never *requires* `fastembed`; it only opportunistically rebuilds
+# the semantic-search index whenever a corresponding search index is already
+# present on disk AND `search_aeat` is importable. First-time users with a bare
+# cache therefore pay zero embedding cost; users who have run
+# `search_aeat.py build` once get a refreshed index automatically after every
+# `refresh` / `url`.
+
+_SEARCH_INDEX_TRIGGER = CACHE_DIR / ".embeddings.npy"
+
+
+def _maybe_reindex() -> None:
+    """Rebuild the full semantic-search index if one already exists.
+
+    No-op when the index has never been built (so fresh users don't pay an
+    embedding cost on first `refresh`). When the index exists, rebuild across
+    ALL domains so the resulting matrix stays global — per-domain scopes
+    would otherwise discard the other domains' chunks."""
+    if not _SEARCH_INDEX_TRIGGER.exists():
+        return
+    try:
+        from search_aeat import build_index as _sa_build
+    except Exception as exc:  # ImportError or runtime failure; never fatal here.
+        print(f"  (skip search index rebuild: search_aeat unavailable: {exc})", file=sys.stderr)
+        return
+    try:
+        _sa_build(force=True, scope="all", verbose=False)
+    except Exception as exc:
+        print(f"  warning: search index rebuild failed: {exc}", file=sys.stderr)
+        return
+    print("  search index rebuilt (search_aeat.py search '<query>')")
+
+
 # ----------------------------- File writes -------------------------------------
 
 def write_cache_file(domain: str, slug: str, title: str, source_url: str, body: str) -> Path:
@@ -504,6 +550,7 @@ def _do_fetch(
 def _refresh_all(scopes: list[str], *, skip_pdfs: bool, force: bool, keep_orphans: bool) -> int:
     state = load_state()
     warnings: list[str] = []
+    domains_written: list[str] = []
 
     for domain in scopes:
         urls = [INDEX_PAGES[domain], *SEED_SUBPAGES.get(domain, [])]
@@ -535,6 +582,7 @@ def _refresh_all(scopes: list[str], *, skip_pdfs: bool, force: bool, keep_orphan
                 entry["pdf_warnings"] = [w for w in w if w.startswith("PDF fetch failed")]
             else:
                 entry.pop("pdf_warnings", None)
+            domains_written.append(domain)
             print(f" → {len(written)} files (status={status})")
         else:
             # Total failure: don't stamp last_refresh; preserve prior value.
@@ -549,6 +597,11 @@ def _refresh_all(scopes: list[str], *, skip_pdfs: bool, force: bool, keep_orphan
 
     state["ttl_days"] = state.get("ttl_days", DEFAULT_TTL_DAYS)
     save_state(state)
+
+    # Rebuild the search index once after all writes, so the resulting matrix
+    # covers every domain (re-embedding per-domain would discard the others).
+    if domains_written:
+        _maybe_reindex()
 
     if warnings:
         print("\nWarnings:")
@@ -763,6 +816,7 @@ def cmd_url(args: argparse.Namespace) -> int:
     state["domains"][domain]["last_refresh"] = _now_iso()
     state["domains"][domain]["last_status"] = "ok"
     save_state(state)
+    _maybe_reindex()
     print(f"wrote {rel}")
     return 0
 
@@ -795,6 +849,19 @@ def main() -> int:
         help="Move misfiled files to the correct domain dir and register unregistered ones.",
     )
 
+    index_p = sub.add_parser(
+        "index",
+        help="Build or rebuild the semantic-search index (delegates to scripts/search_aeat.py).",
+    )
+    index_p.add_argument(
+        "--force", action="store_true",
+        help="Rebuild even if an index already exists.",
+    )
+    index_p.add_argument(
+        "--scope", default="all",
+        help="Limit to one cache domain (irpf|iva|vivienda|on-demand|all).",
+    )
+
     args = parser.parse_args()
     if args.cmd == "status":
         return cmd_status(args)
@@ -804,6 +871,15 @@ def main() -> int:
         return cmd_url(args)
     if args.cmd == "verify":
         return cmd_verify(args)
+    if args.cmd == "index":
+        try:
+            from search_aeat import build_index as _sa_build
+        except Exception as exc:
+            print(f"search_aeat import failed: {exc}", file=sys.stderr)
+            print("Install its dependencies with: uv run --with fastembed --with numpy "
+                  "scripts/search_aeat.py build", file=sys.stderr)
+            return 1
+        return _sa_build(force=args.force, scope=args.scope)
     return 2
 
 
