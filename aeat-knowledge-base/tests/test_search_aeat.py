@@ -5,12 +5,13 @@
 # ///
 """Unit tests for `scripts/search_aeat.py`.
 
-The tests build an isolated mini-cache under a temporary directory, embed it
-with the real `fastembed` model, and assert that canonical queries surface
-chunks from the expected domain.
+Pure-stdlib tests (chunking, BM25 search) run regardless of whether
+`fastembed` and the embedding model are available. The end-to-end tests
+that build the semantic index are skipped automatically when fastembed is
+missing.
 
-First run downloads `paraphrase-multilingual-MiniLM-L12-v2` (~220 MB) into
-`~/.cache/fastembed/`. Subsequent runs are fully offline.
+First end-to-end run downloads `paraphrase-multilingual-MiniLM-L12-v2`
+(~220 MB) into `~/.cache/fastembed/`; subsequent runs are offline.
 
 Run with:
 
@@ -19,6 +20,7 @@ Run with:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import shutil
 import sys
@@ -123,14 +125,30 @@ def _build_index_in(cache_dir: Path) -> None:
         sa.META_PATH = real_cache / ".search_meta.json"
 
 
-def _search_in(cache_dir: Path, query: str, *, k: int = 3, domain: str | None = None):
+def _search_in(cache_dir: Path, query: str, *, k: int = 3, domain: str | None = None, mode: str = "auto"):
     real_cache = sa.CACHE_DIR
     sa.CACHE_DIR = cache_dir
     sa.EMBEDDINGS_PATH = cache_dir / ".embeddings.npy"
     sa.CHUNKS_PATH = cache_dir / ".chunks.jsonl"
     sa.META_PATH = cache_dir / ".search_meta.json"
     try:
-        return sa.search(query, k=k, domain=domain)
+        return sa.search(query, k=k, domain=domain, mode=mode)
+    finally:
+        sa.CACHE_DIR = real_cache
+        sa.EMBEDDINGS_PATH = real_cache / ".embeddings.npy"
+        sa.CHUNKS_PATH = real_cache / ".chunks.jsonl"
+        sa.META_PATH = real_cache / ".search_meta.json"
+
+
+@contextlib.contextmanager
+def _cache_dir_scoped_to(cache_dir: Path):
+    real_cache = sa.CACHE_DIR
+    sa.CACHE_DIR = cache_dir
+    sa.EMBEDDINGS_PATH = cache_dir / ".embeddings.npy"
+    sa.CHUNKS_PATH = cache_dir / ".chunks.jsonl"
+    sa.META_PATH = cache_dir / ".search_meta.json"
+    try:
+        yield cache_dir
     finally:
         sa.CACHE_DIR = real_cache
         sa.EMBEDDINGS_PATH = real_cache / ".embeddings.npy"
@@ -215,6 +233,73 @@ class TestBuildChunks(unittest.TestCase):
             [c.id for c in self.chunks],
             [c.id for c in again],
         )
+
+
+class TestBm25Tokenizer(unittest.TestCase):
+    """`bm25_tokenize` must lowercase, strip accents and split on word boundaries."""
+
+    def test_basic_lowercase_and_tokenize(self) -> None:
+        self.assertEqual(sa.bm25_tokenize("Hola Mundo"), ["hola", "mundo"])
+
+    def test_strips_accents(self) -> None:
+        self.assertEqual(sa.bm25_tokenize("Retención IRPF autónomos"), ["retencion", "irpf", "autonomos"])
+        self.assertEqual(sa.bm25_tokenize("año nuevo año"), ["ano", "nuevo", "ano"])
+
+    def test_punctuation_is_separator(self) -> None:
+        self.assertEqual(sa.bm25_tokenize("modelo 303, IVA; trimestral."), ["modelo", "303", "iva", "trimestral"])
+
+
+class TestBm25Search(unittest.TestCase):
+    """Pure-Python BM25 search over the fixture cache. Runs without `fastembed`."""
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp(prefix="aeat_bm25_"))
+        _write_cache(self.tmp)
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def _chunks(self):
+        with _cache_dir_scoped_to(self.tmp):
+            return sa.build_chunks(self.tmp)
+
+    def _top_domain(self, query: str, *, domain: str | None = None) -> tuple[str, float]:
+        with _cache_dir_scoped_to(self.tmp):
+            hits = sa.bm25_search(query, sa.build_chunks(self.tmp), domain=domain, k=1)
+        self.assertTrue(hits, f"no hits for {query!r}")
+        chunk, score = hits[0]
+        self.assertGreater(score, 0, f"non-positive score for {query!r}")
+        return chunk.domain, score
+
+    def test_plazo_modelo_303_routes_to_iva(self) -> None:
+        domain, _ = self._top_domain("plazo presentación modelo 303 autoliquidación trimestral")
+        self.assertEqual(domain, "iva")
+
+    def test_verifactu_sif_routes_to_iva(self) -> None:
+        domain, _ = self._top_domain("Verifactu SIF facturación electrónica integridad")
+        self.assertEqual(domain, "iva")
+
+    def test_declaracion_renta_minimos_routes_to_irpf(self) -> None:
+        domain, _ = self._top_domain("mínimos personales descendientes planes de pensiones")
+        self.assertEqual(domain, "irpf")
+
+    def test_imputacion_rentas_routes_to_vivienda(self) -> None:
+        domain, _ = self._top_domain("valor catastral inmueble urbano imputación rústico")
+        self.assertEqual(domain, "vivienda")
+
+    def test_domain_filter_is_honoured(self) -> None:
+        with _cache_dir_scoped_to(self.tmp):
+            chunks = sa.build_chunks(self.tmp)
+            hits = sa.bm25_search("trimestral IVA", chunks, domain="iva", k=3)
+        self.assertTrue(hits)
+        for chunk, _score in hits:
+            self.assertEqual(chunk.domain, "iva")
+
+    def test_accent_insensitive_matching(self) -> None:
+        # "Retención" must match the IRPF fixture that says "Retención … 5550".
+        with _cache_dir_scoped_to(self.tmp):
+            chunks = sa.build_chunks(self.tmp)
+            hits = sa.bm25_search("Retención IRPF", chunks, domain="irpf", k=1)
+        self.assertTrue(hits)
+        self.assertEqual(hits[0][0].domain, "irpf")
 
 
 class TestSearchEndToEnd(unittest.TestCase):

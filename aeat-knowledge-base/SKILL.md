@@ -87,19 +87,27 @@ it's already up to date.
 ### 4. Run a semantic query
 
 ```bash
-uv run scripts/search_aeat.py search "<consulta>" --k 5 [--domain irpf|iva|vivienda|on-demand] [--json]
+uv run scripts/search_aeat.py search "<consulta>" --k 5 \
+    [--domain irpf|iva|vivienda|on-demand] [--mode bm25|semantic|hybrid] [--json]
 ```
 
 - The query can be the user's question verbatim, or a short Spanish phrase
   (e.g. `tipo IVA alquiler vivienda`, `plazo modelo 303`).
 - `--domain` restricts retrieval to one section, useful when the user
   names a modelo (e.g. `--domain iva` for "modelo 303").
+- `--mode` controls the retrieval algorithm:
+  - `bm25` (default) — pure-Python BM25, no model download, ~0.2 s cold.
+    Best for literal keyword questions like "¿qué día vence el modelo 130
+    del 2T 2026?". This is what the skill uses by default.
+  - `semantic` — sentence-transformers cosine; ~1.8 s cold (re-imports
+    `fastembed` on every call). Use for paraphrased queries where tokens
+    don't match (e.g. "letra pequeña de las facturas" → SIF/Verifactu).
+  - `hybrid` — runs both and re-ranks via reciprocal-rank fusion. Slowest;
+    use only when the simpler modes miss.
 - `--json` emits one JSON object per result (handy for parsing).
-- Scores are cosine similarities in `[0, 1]`; treat `>0.5` as relevant.
-
-The command prints, per result: domain + slug, page title, source URL,
-cumulative heading path, and a text snippet. No `read_file` is needed —
-the citation is built into the output.
+- The output prints the full chunk text inline (≤ ~1.4 KB), so no
+  follow-up `read_file` is needed — the citation is built into the
+  output.
 
 ### 5. Cite and answer
 
